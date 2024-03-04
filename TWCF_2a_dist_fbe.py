@@ -6,20 +6,29 @@ Distance comparison across blind spot
 TWCF IIT vs PP experiment 2a piloting
 Authors: Clement Abbatecola, Belén María Montabes de la Cruz
     Code version:
+        2.1 # 2024/02/16    Common code for LH and RH
         2.0 # 2024/02/12    Final common version before eye tracking
 """
 
 
 import psychopy
-from psychopy import core, visual, gui, data, event
+from psychopy import core, visual, gui, data, event, monitors
 from psychopy.tools.coordinatetools import pol2cart, cart2pol
 import numpy as np
 import random, datetime, os
 from glob import glob
 from itertools import compress
-from fusion_stim import fusionStim
+# from fusion_stim import fusionStim
 
 #!!# import eye tracking dependencies
+
+import sys, os
+sys.path.append(os.path.join('..', 'EyeTracking'))
+from EyeTracking import localizeSetup, EyeTracker
+
+# the following two imports are used when participants are to hold down a button... might not be necessary here
+from psychopy.hardware import keyboard
+from pyglet.window import key
 
 ######
 #### Initialize experiment
@@ -27,65 +36,107 @@ from fusion_stim import fusionStim
 
 ## parameters
 nRevs   = 10   #
-nTrials  = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
+nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
 letter_height = 40
 
 ## path
-main_path = "C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker"
-data_path = main_path + "/data/"
+main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
+data_path = main_path + 'data/'
 
 ## files
-expInfo = {'ID':'test'}
+expInfo = {'ID':'test', 'hemifield':['left','right']}
 dlg = gui.DlgFromDict(expInfo, title='Infos', screen=0)
+ID = expInfo['ID'].lower()
+hemifield = expInfo['hemifield']
 x = 1
-filename = 'dist_LH_' + expInfo['ID'].lower() + '_'
-while (filename + str(x) + '.txt') in os.listdir(data_path): x += 1
+filename = 'dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
+while (filename + str(x) + '.txt') in os.listdir(data_path):
+    x += 1
 respFile = open(data_path + filename + str(x) + '.txt','w')
 
-respFile.write(''.join(map(str, ["Start: \t" + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "\n"])))
-respFile.write("Resp\tTarg_loc\tFoil_loc\tTarg_len\tDifference\tWhich_first\tTarg_chosen\tReversal\tFoil_type\tEye\tGaze_out\tStair\tTrial\n")
+respFile.write(''.join(map(str, ['Start: \t' + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M') + '\n'])))
+respFile.write('\t'.join(map(str, ['Resp',
+                                   'Targ_loc',
+                                   'Foil_loc',
+                                   'Targ_len',
+                                   'Difference',
+                                   'Which_first',
+                                   'Targ_chosen',
+                                   'Reversal',
+                                   'Foil_type',
+                                   'Eye',
+                                   'Gaze_out',
+                                   'Stair',
+                                   'Trial'])) + '\n')
 print(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-print("Resp", "Targ_loc", "Foil_loc", "Targ_len", "Difference", "Which_first", "Targ_chosen", "Reversal", "Foil_type", "Eye", "Gaze_out", "Stair")
+print("Resp",
+      "Targ_loc",
+      "Foil_loc",
+      "Targ_len",
+      "Difference",
+      "Which_first",
+      "Targ_chosen",
+      "Reversal",
+      "Foil_type",
+      "Eye",
+      "Gaze_out",
+      "Stair")
 
 ## blindspot parameters
-bs_file = open(glob(main_path + "/mapping_data/" + expInfo['ID'] + "_LH_blindspot*.txt")[-1],'r')
+bs_file = open(glob(main_path + 'mapping_data/' + ID + '_LH_blindspot*.txt')[-1], 'r')
 bs_param = bs_file.read().replace('\t','\n').split('\n')
 bs_file.close()
 spot_left_cart = eval(bs_param[1])
 spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
 spot_left_size = eval(bs_param[3])
 
+bs_file = open(glob(main_path + 'mapping_data/' + ID + '_RH_blindspot*.txt')[-1],'r')
+bs_param = bs_file.read().replace('\t','\n').split('\n')
+bs_file.close()
+spot_righ_cart = eval(bs_param[1])
+spot_righ = cart2pol(spot_righ_cart[0], spot_righ_cart[1])
+spot_righ_size = eval(bs_param[3])
+
+if hemifield == 'left':
+    spot_cart = spot_left_cart
+    spot      = spot_left
+    spot_size = spot_left_size
+else:
+    spot_cart = spot_righ_cart
+    spot      = spot_righ
+    spot_size = spot_righ_size
+
 '''
 distance of reference between dots (target)
 => width of blindspot + 2 (dot width, padding) + 2 (to account for a max jitter of 1 on either side)
 '''
-tar =  spot_left_size[0] + 2 + 2
+tar =  spot_size[0] + 2 + 2
 
 # size of blind spot + 2 (dot width, padding)
-if spot_left_cart[1] < 0:
-    ang_up = (cart2pol(spot_left_cart[0], spot_left_cart[1] - spot_left_size[1])[0] - spot_left[0]) + 2
+if hemifield == 'left' and spot_cart[1] < 0:
+    ang_up = (cart2pol(spot_cart[0], spot_cart[1] - spot_size[1])[0] - spot[0]) + 2
 else:
-    ang_up = (cart2pol(spot_left_cart[0], spot_left_cart[1] + spot_left_size[1])[0] - spot_left[0]) + 2
+    ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
 
 ## colour (eye) parameters
-col_file = open(glob(main_path + "/mapping_data/" + expInfo['ID'] + "_col_cal*.txt")[-1],'r')
+col_file = open(glob(main_path + 'mapping_data/' + ID + '_col_cal*.txt')[-1],'r')
 col_param = col_file.read().replace('\t','\n').split('\n')
 col_file.close()
-col_left = eval(col_param[3])
-col_righ = eval(col_param[5])
+col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
+col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
 col_back = [ 0.5, 0.5,  -1.0]
 col_both = [-0.7, -0.7, -0.7] 
 
 ## window & elements
 win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
 win.mouseVisible = False
-fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = 'black')
+fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
 
 hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
 loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
 
 ## instructions
-visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the right hand side of the screen.   \
+visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
 It is important that you fixate on this cross at all times.\n\n You will be presented with pairs of dots. You will have to indicate which dots were closer together.\n\n Left arrow = first pair of dots were closer together.\
 \n\n Right arrow = second pair of dots were closer together.\n\n\n Press the space bar to start the experiment.', height = letter_height,wrapWidth=1200, color = 'black').draw()
 win.flip()
@@ -107,9 +158,9 @@ point_2 = visual.Circle(win, radius = .5, pos = pol2cart(00, 6), units = 'deg', 
 point_3 = visual.Circle(win, radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
 point_4 = visual.Circle(win, radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
 
-blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_left, lineColor = None)
-blindspot.pos = spot_left_cart
-blindspot.size = spot_left_size
+blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
+blindspot.pos = spot_cart
+blindspot.size = spot_size
 blindspot.autoDraw = True 
 
 ## prepare trials
@@ -117,13 +168,23 @@ positions = {
     "left-top": [(spot_left[0] - ang_up, spot_left[1] - tar/2), (spot_left[0] - ang_up, spot_left[1] + tar/2)],
     "left-mid": [(spot_left[0] +     00, spot_left[1] - tar/2), (spot_left[0] +     00, spot_left[1] + tar/2)],
     "left-bot": [(spot_left[0] + ang_up, spot_left[1] - tar/2), (spot_left[0] + ang_up, spot_left[1] + tar/2)],
+    "righ-top": [(spot_righ[0] + ang_up, spot_righ[1] - tar/2), (spot_righ[0] + ang_up, spot_righ[1] + tar/2)],
+    "righ-mid": [(spot_righ[0] +     00, spot_righ[1] - tar/2), (spot_righ[0] +     00, spot_righ[1] + tar/2)],
+    "righ-bot": [(spot_righ[0] - ang_up, spot_righ[1] - tar/2), (spot_righ[0] - ang_up, spot_righ[1] + tar/2)],
 }
 
-# First column is target, second column is foil, those are the valid trials in the proportion we want
-pos_array = [["left-mid", "left-top"],
-             ["left-mid", "left-bot"],
-             ["left-top", "left-bot"],
-             ["left-bot", "left-top"]]
+if hemifield == 'left':
+    # First column is target, second column is foil
+    pos_array = [["left-mid", "left-top"],
+                 ["left-mid", "left-bot"],
+                 ["left-top", "left-bot"],
+                 ["left-bot", "left-top"]]
+else:
+    pos_array = [["righ-mid", "righ-top"],
+                 ["righ-mid", "righ-bot"],
+                 ["righ-top", "righ-bot"],
+                 ["righ-bot", "righ-top"]]
+
 pos_array_bsa = pos_array[0:2]
 pos_array_out = pos_array[2:4]
 
@@ -136,7 +197,7 @@ pos_array_out = pos_array[2:4]
 #!!#
 
 # first calibration
-visual.TextStim(win,'Calibration...', color = 'black', units = 'deg', pos = (0,-2)).draw()
+visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
 fixation.draw()
 win.flip()
 k = event.waitKeys()
@@ -203,12 +264,12 @@ while any(stairs_ongoing):
         point_3.pos = pol2cart(positions[pos[1]][0][0], positions[pos[1]][0][1]       + shift[1])
         point_4.pos = pol2cart(positions[pos[1]][1][0], positions[pos[1]][1][1] + dif + shift[1])
 
-        if eye[which_stair] == 'left':
-            point_1.fillColor = col_left
-            point_2.fillColor = col_left
+        if eye[which_stair] == hemifield:
+            point_1.fillColor = col_ipsi
+            point_2.fillColor = col_ipsi
         else:
-            point_1.fillColor = col_righ
-            point_2.fillColor = col_righ
+            point_1.fillColor = col_cont
+            point_2.fillColor = col_cont
         point_3.fillColor = col_both
         point_4.fillColor = col_both
 
@@ -218,12 +279,12 @@ while any(stairs_ongoing):
         point_1.pos = pol2cart(positions[pos[1]][0][0], positions[pos[1]][0][1]       + shift[1])
         point_2.pos = pol2cart(positions[pos[1]][1][0], positions[pos[1]][1][1] + dif + shift[1])
 
-        if eye[which_stair] == 'left':
-            point_3.fillColor = col_left
-            point_4.fillColor = col_left
+        if eye[which_stair] == hemifield:
+            point_3.fillColor = col_ipsi
+            point_4.fillColor = col_ipsi
         else:
-            point_3.fillColor = col_righ
-            point_4.fillColor = col_righ
+            point_3.fillColor = col_cont
+            point_4.fillColor = col_cont
         point_1.fillColor = col_both
         point_2.fillColor = col_both
     
@@ -351,7 +412,7 @@ while any(stairs_ongoing):
         # auto recalibrate if no initial fixation
         if recalibrate:
             recalibrate = False
-            visual.TextStim(win,'Calibration...', color = 'black', units = 'deg', pos = (0,-2)).draw()
+            visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
             fixation.draw()
             win.flip()
             k = event.waitKeys()
@@ -372,7 +433,7 @@ while any(stairs_ongoing):
         else:
             hiFusion.draw()
             loFusion.draw()
-            visual.TextStim(win, '#', height = letter_height, color = 'black').draw()
+            visual.TextStim(win, '#', height = letter_height, color = col_both).draw()
             win.flip()
             k = ['wait']
             while k[0] not in ['q', 'up', 'r']:
@@ -383,7 +444,7 @@ while any(stairs_ongoing):
     
             # manual recalibrate
             if k[0] in ['r']:
-                visual.TextStim(win,'Calibration...', color = 'black', units = 'deg', pos = (0,-2)).draw()
+                visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
                 fixation.draw()
                 win.flip()
                 k = event.waitKeys()
