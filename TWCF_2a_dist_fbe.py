@@ -333,7 +333,7 @@ def doDistanceTask(ID=None, hemifield=None):
             position[which_stair] = pos_arrays[which_stair][:]
         pos = position[which_stair].pop()
 
-        shift = random.sample([-1, -.5, 0, .5, .1], 2)
+        shift = random.sample([-1, -.5, 0, .5, .1], 2) # why have a 0 offset? if we use: [-1., -2/3, -1/3, 1/3, 2/3, 1.] there is always some offset
         dif = intervals[cur_int[which_stair]] * foil_type[which_stair]
         which_first = random.choice(['Targ', 'Foil'])
 
@@ -346,11 +346,15 @@ def doDistanceTask(ID=None, hemifield=None):
             if eye[which_stair] == hemifield:
                 point_1.fillColor = col_ipsi
                 point_2.fillColor = col_ipsi
+                point_3.fillColor = col_cont
+                point_4.fillColor = col_cont
             else:
                 point_1.fillColor = col_cont
                 point_2.fillColor = col_cont
-            point_3.fillColor = col_both
-            point_4.fillColor = col_both
+                point_3.fillColor = col_ipsi
+                point_4.fillColor = col_ipsi
+            # point_3.fillColor = col_both
+            # point_4.fillColor = col_both
 
         else:
             point_3.pos = pol2cart(positions[pos[0]][0][0], positions[pos[0]][0][1]       + shift[0])
@@ -359,13 +363,17 @@ def doDistanceTask(ID=None, hemifield=None):
             point_2.pos = pol2cart(positions[pos[1]][1][0], positions[pos[1]][1][1] + dif + shift[1])
 
             if eye[which_stair] == hemifield:
+                point_1.fillColor = col_cont
+                point_2.fillColor = col_cont
                 point_3.fillColor = col_ipsi
                 point_4.fillColor = col_ipsi
             else:
+                point_1.fillColor = col_ipsi
+                point_2.fillColor = col_ipsi
                 point_3.fillColor = col_cont
                 point_4.fillColor = col_cont
-            point_1.fillColor = col_both
-            point_2.fillColor = col_both
+            # point_1.fillColor = col_both
+            # point_2.fillColor = col_both
         
         # hiFusion.resetProperties()
         # loFusion.resetProperties()
@@ -376,7 +384,7 @@ def doDistanceTask(ID=None, hemifield=None):
         ## pre trial fixation
         trial_clock.reset()
         #!!# setup / start recording
-        gaze_out = False
+        gaze_out = False # unnecessary variable?
         while True and not abort:
             # Start detecting time
             t = trial_clock.getTime()
@@ -422,7 +430,7 @@ def doDistanceTask(ID=None, hemifield=None):
             fixation.draw()
             cfg['hw']['win'].flip()
             trial_clock.reset()
-            gaze_in_region = True
+            gaze_in_region = True # unnecessary variable?
         
             while trial_clock.getTime() < 1.3 and not abort:
                 t = trial_clock.getTime()
