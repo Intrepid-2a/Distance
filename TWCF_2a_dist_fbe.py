@@ -42,8 +42,10 @@ def doDistanceTask(ID=None, hemifield=None):
     letter_height = 40
 
     ## path
-    main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
-    data_path = main_path + 'data/'
+    # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
+    main_path = ''
+    data_path = main_path + '../data/distance/'
+    os.makedirs(data_path, exist_ok=True)
 
     ## files
     expInfo = {}
@@ -98,14 +100,16 @@ def doDistanceTask(ID=None, hemifield=None):
         "Stair")
 
     ## blindspot parameters
-    bs_file = open(glob(main_path + 'mapping_data/' + ID + '_LH_blindspot*.txt')[-1], 'r')
+    # bs_file = open(glob(main_path + 'mapping_data/' + ID + '_LH_blindspot*.txt')[-1], 'r')
+    bs_file = open(glob('../data/mapping/' + ID + '_LH_blindspot*.txt')[-1], 'r')
     bs_param = bs_file.read().replace('\t','\n').split('\n')
     bs_file.close()
     spot_left_cart = eval(bs_param[1])
     spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
     spot_left_size = eval(bs_param[3])
 
-    bs_file = open(glob(main_path + 'mapping_data/' + ID + '_RH_blindspot*.txt')[-1],'r')
+    # bs_file = open(glob(main_path + 'mapping_data/' + ID + '_RH_blindspot*.txt')[-1],'r')
+    bs_file = open(glob('../data/mapping/' + ID + '_RH_blindspot*.txt')[-1],'r')
     bs_param = bs_file.read().replace('\t','\n').split('\n')
     bs_file.close()
     spot_righ_cart = eval(bs_param[1])
@@ -134,33 +138,67 @@ def doDistanceTask(ID=None, hemifield=None):
         ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
 
     ## colour (eye) parameters
-    col_file = open(glob(main_path + 'mapping_data/' + ID + '_col_cal*.txt')[-1],'r')
+    # col_file = open(glob(main_path + 'mapping_data/' + ID + '_col_cal*.txt')[-1],'r')
+    col_file = open(glob('../data/color/' + ID + '_col_cal*.txt')[-1],'r')
     col_param = col_file.read().replace('\t','\n').split('\n')
     col_file.close()
     col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
     col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
-    col_back = [ 0.5, 0.5,  -1.0]
-    col_both = [-0.7, -0.7, -0.7] 
+    # col_back = [ 0.5, 0.5,  -1.0]
+    # col_both = [-0.7, -0.7, -0.7] 
+
+
+
 
     ## window & elements
-    win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
-    win.mouseVisible = False
-    fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
+    # win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
+    # win.mouseVisible = False # this should not be invisible when the dummy mouse tracker is used?
+    # fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
 
-    hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
-    loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
+    # hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
+    # loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
+
+
+    if os.sys.platform == 'linux':
+        location = 'toronto'
+    else:
+        location = 'glasgow'
+
+
+    glasses = 'RG'
+    trackEyes = [True, True]
+
+
+    setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=None) # data path is for the mapping data, not the eye-tracker data!
+
+    cfg = {}
+    cfg['hw'] = setup
+
+
 
     ## instructions
-    visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
+    visual.TextStim(cfg['hw']['win'],'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
     It is important that you fixate on this cross at all times.\n\n You will be presented with pairs of dots. You will have to indicate which dots were closer together.\n\n Left arrow = first pair of dots were closer together.\
     \n\n Right arrow = second pair of dots were closer together.\n\n\n Press the space bar to start the experiment.', height = letter_height,wrapWidth=1200, color = 'black').draw()
-    win.flip()
+    cfg['hw']['win'].flip()
     k = ['wait']
     while k[0] not in ['q','space']:
         k = event.waitKeys()
     if k[0] in ['q']:
-        win.close()
+
+        # put message in response file that the experiment was quitted?
+
+        respFile.close()
+
+        # send quit comment
+        # stop tracking
+        # close file
+        # shutdown eye-tracker
+
+        cfg['hw']['win'].close()
         core.quit()
+
+        return(False) # since this is now a function
 
 
     ######
@@ -168,12 +206,12 @@ def doDistanceTask(ID=None, hemifield=None):
     ######
 
     ## stimuli
-    point_1 = visual.Circle(win, radius = .5, pos = pol2cart(00, 3), units = 'deg', fillColor = col_both, lineColor = None)
-    point_2 = visual.Circle(win, radius = .5, pos = pol2cart(00, 6), units = 'deg', fillColor = col_both, lineColor = None)
-    point_3 = visual.Circle(win, radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
-    point_4 = visual.Circle(win, radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
+    point_1 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 3), units = 'deg', fillColor = col_both, lineColor = None)
+    point_2 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 6), units = 'deg', fillColor = col_both, lineColor = None)
+    point_3 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
+    point_4 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
 
-    blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
+    blindspot = visual.Circle(cfg['hw']['win'], radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
     blindspot.pos = spot_cart
     blindspot.size = spot_size
     blindspot.autoDraw = True 
@@ -211,26 +249,52 @@ def doDistanceTask(ID=None, hemifield=None):
     ## setup and initialize eye-tracker + gaze ok region etc.
     #!!#
 
+
     # first calibration
-    visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+
+    # it seems to me that this wait routine is not necessary, and with the quit option in there, it also does need a lot of extra code
+
+    visual.TextStim(cfg['hw']['win'],'Press any key to start calibration', color = col_both, units = 'deg', pos = (0,-2)).draw()
     fixation.draw()
-    win.flip()
+    cfg['hw']['win'].flip()
     k = event.waitKeys()
     if k[0] in ['q']:
+        # put message in response file that the experiment was quitted?
+
         respFile.close()
-        win.close()
+
+        # send quit message
+        # stop tracking
+        # close files
+        # shutdown eye-tracker
+
+        cfg['hw']['win'].close()
         core.quit()
+
+        return(False) # since this is now a function
         
     #!!# calibrate
 
+    # I don't know what the next wait does, other than stop the experiment for no apparent reason?
+
     fixation.draw()
-    win.flip()
+    cfg['hw']['win'].flip()
 
     k = event.waitKeys()
     if k[0] in ['q']:
+        # put message in response file that the experiment was quitted?
+
         respFile.close()
-        win.close()
+
+        # send quit message
+        # stop tracking
+        # close files
+        # shutdown eye-tracker
+
+        cfg['hw']['win'].close()
         core.quit()
+
+        return(False) # since this is now a function
 
     ######
     #### Staircase
@@ -303,8 +367,11 @@ def doDistanceTask(ID=None, hemifield=None):
             point_1.fillColor = col_both
             point_2.fillColor = col_both
         
-        hiFusion.resetProperties()
-        loFusion.resetProperties()
+        # hiFusion.resetProperties()
+        # loFusion.resetProperties()
+        cfg['hw']['fusion']['hi'].resetProperties()
+        cfg['hw']['fusion']['lo'].resetProperties()
+
 
         ## pre trial fixation
         trial_clock.reset()
@@ -322,10 +389,12 @@ def doDistanceTask(ID=None, hemifield=None):
                 break
             #!!#
 
-            hiFusion.draw()
-            loFusion.draw()
+            # hiFusion.draw()
+            # loFusion.draw()
+            cfg['hw']['fusion']['hi'].draw()
+            cfg['hw']['fusion']['lo'].draw()
             fixation.draw()
-            win.flip()
+            cfg['hw']['win'].flip()
 
             k = event.getKeys(['q'])
             if k:
@@ -346,10 +415,12 @@ def doDistanceTask(ID=None, hemifield=None):
             
             #!!# start recording
             
-            hiFusion.draw()
-            loFusion.draw()
+            # hiFusion.draw()
+            # loFusion.draw()
+            cfg['hw']['fusion']['hi'].draw()
+            cfg['hw']['fusion']['lo'].draw()
             fixation.draw()
-            win.flip()
+            cfg['hw']['win'].flip()
             trial_clock.reset()
             gaze_in_region = True
         
@@ -364,8 +435,11 @@ def doDistanceTask(ID=None, hemifield=None):
                     gaze_out = True
                     break
                     
-                hiFusion.draw()
-                loFusion.draw()
+                # hiFusion.draw()
+                # loFusion.draw()
+                cfg['hw']['fusion']['hi'].draw()
+                cfg['hw']['fusion']['lo'].draw()
+
                 fixation.draw()
         
                 if .1 <= trial_clock.getTime() < .5:
@@ -380,7 +454,7 @@ def doDistanceTask(ID=None, hemifield=None):
                     point_3.draw()
                     point_4.draw()
         
-                win.flip()
+                cfg['hw']['win'].flip()
                 
                 k = event.getKeys(['q'])
                 if k and 'q' in k:
@@ -398,10 +472,13 @@ def doDistanceTask(ID=None, hemifield=None):
             ## response
             fixation.ori += 45
             fixation.color = 'black'
-            hiFusion.draw()
-            loFusion.draw()
+            # hiFusion.draw()
+            # loFusion.draw()
+            cfg['hw']['fusion']['hi'].draw()
+            cfg['hw']['fusion']['lo'].draw()
+
             fixation.draw()
-            win.flip()
+            cfg['hw']['win'].flip()
             
             k = ['wait']
             while k[0] not in ['q', 'space', 'left', 'right']:
@@ -427,9 +504,9 @@ def doDistanceTask(ID=None, hemifield=None):
             # auto recalibrate if no initial fixation
             if recalibrate:
                 recalibrate = False
-                visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
                 fixation.draw()
-                win.flip()
+                cfg['hw']['win'].flip()
                 k = event.waitKeys()
                 if k[0] in ['q']:
                     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
@@ -438,7 +515,7 @@ def doDistanceTask(ID=None, hemifield=None):
                 #!!# calibrate
                 
                 fixation.draw()
-                win.flip()
+                cfg['hw']['win'].flip()
                 k = event.waitKeys()
                 if k[0] in ['q']:
                     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
@@ -446,10 +523,14 @@ def doDistanceTask(ID=None, hemifield=None):
             
             # changing fixation to signify gaze out, restart with 'up' possibily of break and manual recalibration 'r' 
             else:
-                hiFusion.draw()
-                loFusion.draw()
-                visual.TextStim(win, '#', height = letter_height, color = col_both).draw()
-                win.flip()
+                # hiFusion.draw()
+                # loFusion.draw()
+                cfg['hw']['fusion']['hi'].draw()
+                cfg['hw']['fusion']['lo'].draw()
+                # this is the fourth (?) time these are drawn... that should have been only 1... it's such complicated code for such a simple experiment
+
+                visual.TextStim(cfg['hw']['win'], '#', height = letter_height, color = col_both).draw()
+                cfg['hw']['win'].flip()
                 k = ['wait']
                 while k[0] not in ['q', 'up', 'r']:
                     k = event.waitKeys()
@@ -459,9 +540,9 @@ def doDistanceTask(ID=None, hemifield=None):
         
                 # manual recalibrate
                 if k[0] in ['r']:
-                    visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                    visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
                     fixation.draw()
-                    win.flip()
+                    cfg['hw']['win'].flip()
                     k = event.waitKeys()
                     if k[0] in ['q']:
                         respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
@@ -470,7 +551,7 @@ def doDistanceTask(ID=None, hemifield=None):
                     #!!# calibrate
 
                     fixation.draw()
-                    win.flip()
+                    cfg['hw']['win'].flip()
                     k = event.waitKeys()
                     if k[0] in ['q']:
                         respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
@@ -541,12 +622,12 @@ def doDistanceTask(ID=None, hemifield=None):
 
     respFile.close()
     print(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-    blindspot.autoDraw = False
+    blindspot.autoDraw = False # no stimulus should be on autodraw? that feature was a mistake in psychopy
 
     #!!# close eye-tracker
 
     ## last screen
-    visual.TextStim(win,'Run ended.', height = letter_height, color = 'black').draw()
-    win.flip()
+    visual.TextStim(cfg['hw']['win'],'Run ended.', height = letter_height, color = 'black').draw()
+    cfg['hw']['win'].flip()
     k = event.waitKeys()
 
