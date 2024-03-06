@@ -455,7 +455,7 @@ def doDistanceTask(ID=None, hemifield=None):
                 #!!# if position is invalid or >2 dva, set gaze in region to False
                 #!!# may also record gazes in file here and do stuff like showing gaze position if simulating with mouse
                 
-                if not gaze_in_region:
+                if not cfg['hw']['tracker'].gazeInFixationWindow():
                     gaze_out = True
                     break
                     
