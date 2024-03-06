@@ -206,10 +206,14 @@ def doDistanceTask(ID=None, hemifield=None):
     ######
 
     ## stimuli
-    point_1 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 3), units = 'deg', fillColor = col_both, lineColor = None)
-    point_2 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 6), units = 'deg', fillColor = col_both, lineColor = None)
-    point_3 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
-    point_4 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
+    # point_1 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 3), units = 'deg', fillColor = col_both, lineColor = None)
+    # point_2 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(00, 6), units = 'deg', fillColor = col_both, lineColor = None)
+    # point_3 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
+    # point_4 = visual.Circle(cfg['hw']['win'], radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
+    point_1 = visual.Circle(cfg['hw']['win'], radius = .5, lineColor = None)
+    point_2 = visual.Circle(cfg['hw']['win'], radius = .5, lineColor = None)
+    point_3 = visual.Circle(cfg['hw']['win'], radius = .5, lineColor = None)
+    point_4 = visual.Circle(cfg['hw']['win'], radius = .5, lineColor = None)
 
     blindspot = visual.Circle(cfg['hw']['win'], radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
     blindspot.pos = spot_cart
@@ -254,7 +258,8 @@ def doDistanceTask(ID=None, hemifield=None):
 
     # it seems to me that this wait routine is not necessary, and with the quit option in there, it also does need a lot of extra code
 
-    visual.TextStim(cfg['hw']['win'],'Press any key to start calibration', color = col_both, units = 'deg', pos = (0,-2)).draw()
+    # visual.TextStim(cfg['hw']['win'],'Press any key to start calibration', color = col_both, units = 'deg', pos = (0,-2)).draw()
+    visual.TextStim(cfg['hw']['win'],'Press any key to start calibration', color = [-1, -1, -1], units = 'deg', pos = (0,-2)).draw()
     fixation.draw()
     cfg['hw']['win'].flip()
     k = event.waitKeys()
@@ -274,6 +279,9 @@ def doDistanceTask(ID=None, hemifield=None):
         return(False) # since this is now a function
         
     #!!# calibrate
+    cfg['hw']['tracker'].initialize()
+    cfg['hw']['tracker'].calibrate()
+    cfg['hw']['tracker'].startcollecting()
 
     # I don't know what the next wait does, other than stop the experiment for no apparent reason?
 
@@ -333,7 +341,7 @@ def doDistanceTask(ID=None, hemifield=None):
             position[which_stair] = pos_arrays[which_stair][:]
         pos = position[which_stair].pop()
 
-        shift = random.sample([-1, -.5, 0, .5, .1], 2) # why have a 0 offset? if we use: [-1., -2/3, -1/3, 1/3, 2/3, 1.] there is always some offset
+        shift = random.sample([-1, -.5, 0, .5, .1], 2) # why have a 0 offset? if we use: [-1., -2/3, -1/3, 1/3, 2/3, 1.] or maybe some round values, there is always some offset
         dif = intervals[cur_int[which_stair]] * foil_type[which_stair]
         which_first = random.choice(['Targ', 'Foil'])
 
@@ -382,43 +390,50 @@ def doDistanceTask(ID=None, hemifield=None):
 
 
         ## pre trial fixation
+        cfg['hw']['tracker'].waitForFixation()
+
+
         trial_clock.reset()
         #!!# setup / start recording
-        gaze_out = False # unnecessary variable?
-        while True and not abort:
-            # Start detecting time
-            t = trial_clock.getTime()
-            
-            #!!# get position at each t
-            #!!# every 100 ms, check that positions were on average <2 dva from center
-            #!!# after 5 consecutive intervals (500 ms) with correct fixation, break to start trial
-            #!!# for now we break automatically:
-            if t > .5:
-                break
-            #!!#
 
-            # hiFusion.draw()
-            # loFusion.draw()
-            cfg['hw']['fusion']['hi'].draw()
-            cfg['hw']['fusion']['lo'].draw()
-            fixation.draw()
-            cfg['hw']['win'].flip()
+        cfg['hw']['tracker'].startcollecting()
 
-            k = event.getKeys(['q'])
-            if k:
-                if 'q' in k:
-                    abort = True
-                    break
+        # gaze_out = False # unnecessary variable?
+        # while True and not abort:
+        #     # Start detecting time
+        #     t = trial_clock.getTime()
             
-            # set up auto recalibrate after 5s
-            if t > 5:
-                recalibrate = True
-                gaze_out = True
-                break
+        #     #!!# get position at each t
+        #     #!!# every 100 ms, check that positions were on average <2 dva from center
+        #     #!!# after 5 consecutive intervals (500 ms) with correct fixation, break to start trial
+        #     #!!# for now we break automatically:
+        #     if t > .5:
+        #         break
+        #     #!!#
+
+        #     # hiFusion.draw()
+        #     # loFusion.draw()
+        #     cfg['hw']['fusion']['hi'].draw()
+        #     cfg['hw']['fusion']['lo'].draw()
+        #     fixation.draw()
+        #     cfg['hw']['win'].flip()
+
+        #     k = event.getKeys(['q'])
+        #     if k:
+        #         if 'q' in k:
+        #             abort = True
+        #             break
+            
+        #     # set up auto recalibrate after 5s
+        #     if t > 5:
+        #         recalibrate = True
+        #         gaze_out = True
+        #         break
 
         #!!# stop recording/clear events
         
-        if not gaze_out:
+        # if not gaze_out:
+        if cfg['hw']['tracker'].gazeInFixationWindow():
             ## trial
             
             #!!# start recording
@@ -512,24 +527,31 @@ def doDistanceTask(ID=None, hemifield=None):
             # auto recalibrate if no initial fixation
             if recalibrate:
                 recalibrate = False
-                visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
-                fixation.draw()
-                cfg['hw']['win'].flip()
-                k = event.waitKeys()
-                if k[0] in ['q']:
-                    respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                    break
+                cfg['hw']['tracker'].stopcollecting() # do we even have to stop/start collecting?
+                cfg['hw']['tracker'].calibrate()
+                cfg['hw']['tracker'].startcollecting()
+
+                # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                # fixation.draw()
+                # cfg['hw']['win'].flip()
+                # k = event.waitKeys()
+                # if k[0] in ['q']:
+                #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                #     break
                     
-                #!!# calibrate
+                # #!!# calibrate
                 
-                fixation.draw()
-                cfg['hw']['win'].flip()
-                k = event.waitKeys()
-                if k[0] in ['q']:
-                    respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                    break
+                # fixation.draw()
+                # cfg['hw']['win'].flip()
+                # k = event.waitKeys()
+                # if k[0] in ['q']:
+                #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                #     break
             
             # changing fixation to signify gaze out, restart with 'up' possibily of break and manual recalibration 'r' 
+
+            # can't we just skip this whole part? in 99% of trials we'd just need to recalibrate... but now you have to press a button, and not the wrong one
+
             else:
                 # hiFusion.draw()
                 # loFusion.draw()
@@ -537,7 +559,8 @@ def doDistanceTask(ID=None, hemifield=None):
                 cfg['hw']['fusion']['lo'].draw()
                 # this is the fourth (?) time these are drawn... that should have been only 1... it's such complicated code for such a simple experiment
 
-                visual.TextStim(cfg['hw']['win'], '#', height = letter_height, color = col_both).draw()
+                # visual.TextStim(cfg['hw']['win'], '#', height = letter_height, color = col_both).draw()
+                visual.TextStim(cfg['hw']['win'], '#', height = letter_height, color = [-1, -1, -1]).draw()
                 cfg['hw']['win'].flip()
                 k = ['wait']
                 while k[0] not in ['q', 'up', 'r']:
@@ -548,22 +571,26 @@ def doDistanceTask(ID=None, hemifield=None):
         
                 # manual recalibrate
                 if k[0] in ['r']:
-                    visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
-                    fixation.draw()
-                    cfg['hw']['win'].flip()
-                    k = event.waitKeys()
-                    if k[0] in ['q']:
-                        respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                        break
+                    cfg['hw']['tracker'].stopcollecting() # do we even have to stop/start collecting?
+                    cfg['hw']['tracker'].calibrate()
+                    cfg['hw']['tracker'].startcollecting()
 
-                    #!!# calibrate
+                    # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                    # fixation.draw()
+                    # cfg['hw']['win'].flip()
+                    # k = event.waitKeys()
+                    # if k[0] in ['q']:
+                    #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                    #     break
 
-                    fixation.draw()
-                    cfg['hw']['win'].flip()
-                    k = event.waitKeys()
-                    if k[0] in ['q']:
-                        respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                        break
+                    # #!!# calibrate
+
+                    # fixation.draw()
+                    # cfg['hw']['win'].flip()
+                    # k = event.waitKeys()
+                    # if k[0] in ['q']:
+                    #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                    #     break
                 
             position[which_stair] = position[which_stair] + [pos]
             increment = False
@@ -632,10 +659,16 @@ def doDistanceTask(ID=None, hemifield=None):
     print(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
     blindspot.autoDraw = False # no stimulus should be on autodraw? that feature was a mistake in psychopy
 
-    #!!# close eye-tracker
-
     ## last screen
     visual.TextStim(cfg['hw']['win'],'Run ended.', height = letter_height, color = 'black').draw()
     cfg['hw']['win'].flip()
     k = event.waitKeys()
+
+    #!!# close eye-tracker
+
+    cfg['hw']['tracker'].closefile()
+    cfg['hw']['tracker'].stopcollecting()
+    cfg['hw']['tracker'].shutdown() # this should download the EyeLink edf file
+    cfg['hw']['win'].close()
+    core.quit()
 
