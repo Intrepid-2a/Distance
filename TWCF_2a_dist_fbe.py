@@ -174,7 +174,7 @@ def doDistanceTask(ID=None, hemifield=None):
     cfg = {}
     cfg['hw'] = setup
 
-
+    fixation = visual.ShapeStim(cfg['hw']['win'], vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = [-1, -1, -1])
 
     ## instructions
     visual.TextStim(cfg['hw']['win'],'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
