@@ -218,7 +218,7 @@ def doDistanceTask(ID=None, hemifield=None):
     blindspot = visual.Circle(cfg['hw']['win'], radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
     blindspot.pos = spot_cart
     blindspot.size = spot_size
-    blindspot.autoDraw = True 
+    # blindspot.autoDraw = True # this interferes with calibration
 
     ## prepare trials
     positions = {
@@ -443,6 +443,7 @@ def doDistanceTask(ID=None, hemifield=None):
             cfg['hw']['fusion']['hi'].draw()
             cfg['hw']['fusion']['lo'].draw()
             fixation.draw()
+            blindspot.draw()
             cfg['hw']['win'].flip()
             trial_clock.reset()
             gaze_in_region = True # unnecessary variable?
@@ -476,7 +477,9 @@ def doDistanceTask(ID=None, hemifield=None):
                 elif 0.9 <= trial_clock.getTime() < 1.3:
                     point_3.draw()
                     point_4.draw()
-        
+                
+                blindspot.draw()
+
                 cfg['hw']['win'].flip()
                 
                 k = event.getKeys(['q'])
