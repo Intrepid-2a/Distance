@@ -39,7 +39,7 @@ def doDistanceTask(ID=None, hemifield=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40
+    letter_height = 2
 
     ## path
     # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
@@ -432,6 +432,8 @@ def doDistanceTask(ID=None, hemifield=None):
 
         #!!# stop recording/clear events
         
+        gaze_out = False
+
         # if not gaze_out:
         if cfg['hw']['tracker'].gazeInFixationWindow():
             ## trial
@@ -500,10 +502,11 @@ def doDistanceTask(ID=None, hemifield=None):
             fixation.color = 'black'
             # hiFusion.draw()
             # loFusion.draw()
+
             cfg['hw']['fusion']['hi'].draw()
             cfg['hw']['fusion']['lo'].draw()
-
             fixation.draw()
+            blindspot.draw() # this would be better left out IMO
             cfg['hw']['win'].flip()
             
             k = ['wait']
@@ -529,10 +532,10 @@ def doDistanceTask(ID=None, hemifield=None):
         
             # auto recalibrate if no initial fixation
             if recalibrate:
-                recalibrate = False
                 cfg['hw']['tracker'].stopcollecting() # do we even have to stop/start collecting?
                 cfg['hw']['tracker'].calibrate()
                 cfg['hw']['tracker'].startcollecting()
+                recalibrate = False
 
                 # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
                 # fixation.draw()
