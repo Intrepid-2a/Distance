@@ -43,9 +43,11 @@ def doDistanceTask(ID=None, hemifield=None):
 
     ## path
     # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
-    main_path = ''
-    data_path = main_path + '../data/distance/'
+    main_path = '../data/distance/'
+    data_path = main_path + ID + '/'
+    eyetracking_path = main_path + 'eyetracking/' + ID + '/'
     os.makedirs(data_path, exist_ok=True)
+    os.makedirs(eyetracking_path, exist_ok=True)
 
     ## files
     expInfo = {}
@@ -168,8 +170,14 @@ def doDistanceTask(ID=None, hemifield=None):
     glasses = 'RG'
     trackEyes = [True, True]
 
+    # filename = ''%(ID, hemifield)
 
-    setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=None) # data path is for the mapping data, not the eye-tracker data!
+    x = 1
+    et_filename = 'dist' + ('LH' if hemifield == 'left' else 'RH')
+    while len(glob(eyetracking_path + et_filename + str(x) + '.*')):
+        x += 1
+
+    setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x)) # data path is for the mapping data, not the eye-tracker data!
 
     cfg = {}
     cfg['hw'] = setup
@@ -388,7 +396,6 @@ def doDistanceTask(ID=None, hemifield=None):
         cfg['hw']['fusion']['hi'].resetProperties()
         cfg['hw']['fusion']['lo'].resetProperties()
 
-
         ## pre trial fixation
         cfg['hw']['tracker'].waitForFixation()
 
@@ -397,6 +404,9 @@ def doDistanceTask(ID=None, hemifield=None):
         #!!# setup / start recording
 
         cfg['hw']['tracker'].startcollecting()
+
+        cfg['hw']['tracker'].comment('start trial %d'%(trial))
+
 
         # the block of code below seems not to have any purpose... except wait for .5 seconds?
         # unless this was supposed to do the wait for fixation function? (called a few lines above here)
@@ -435,6 +445,8 @@ def doDistanceTask(ID=None, hemifield=None):
 
         #!!# stop recording/clear events
         
+        stim_comments = ['pair 2 off', 'pair 1 off', 'pair 2 on', 'pair 1 on']
+
         gaze_out = False
 
         # if not gaze_out:
@@ -472,14 +484,20 @@ def doDistanceTask(ID=None, hemifield=None):
                 fixation.draw()
         
                 if .1 <= trial_clock.getTime() < .5:
+                    if len(stim_comments) == 4:
+                        cfg['hw']['tracker'].comment(stim_comments.pop())
                     point_1.draw()
                     point_2.draw()
                 elif .5 <= trial_clock.getTime() < 0.9:
+                    if len(stim_comments) == 3:
+                        cfg['hw']['tracker'].comment(stim_comments.pop())
                     point_1.draw()
                     point_2.draw()
                     point_3.draw()
                     point_4.draw()
                 elif 0.9 <= trial_clock.getTime() < 1.3:
+                    if len(stim_comments) == 2:
+                        cfg['hw']['tracker'].comment(stim_comments.pop())
                     point_3.draw()
                     point_4.draw()
                 
@@ -493,6 +511,9 @@ def doDistanceTask(ID=None, hemifield=None):
                     break
                     
             #!!# stop recording/clear events
+            if len(stim_comments) == 1:
+                cfg['hw']['tracker'].comment(stim_comments.pop())
+
 
         if abort:
             respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
@@ -516,15 +537,18 @@ def doDistanceTask(ID=None, hemifield=None):
             while k[0] not in ['q', 'space', 'left', 'right']:
                 k = event.waitKeys()
             if k[0] in ['q']:
+                cfg['hw']['tracker'].comment('quit run')
                 respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
                 break
             elif k[0] in ['space']:
+                cfg['hw']['tracker'].comment('abort trial')
                 position[which_stair] = position[which_stair] + [pos]
                 increment = False
                 resp = 'abort'
                 targ_chosen = 'abort'
                 reversal = 'abort'
             else:
+                cfg['hw']['tracker'].comment('response')
                 resp = 1 if k[0] == 'left' else 2
                 
             fixation.ori -= 45
@@ -665,6 +689,7 @@ def doDistanceTask(ID=None, hemifield=None):
         trial += 1
 
     if not any(stairs_ongoing):
+        cfg['hw']['tracker'].comment('run ended properly')
         print('run ended properly!')
 
     respFile.close()
@@ -680,7 +705,7 @@ def doDistanceTask(ID=None, hemifield=None):
 
     cfg['hw']['tracker'].closefile()
     cfg['hw']['tracker'].stopcollecting()
-    cfg['hw']['tracker'].shutdown() # this should download the EyeLink edf file
+    cfg['hw']['tracker'].shutdown() # this should download the EyeLink edf file as well as close the connection
     cfg['hw']['win'].close()
-    core.quit()
+    core.quit() # is this necessary? or good?
 
