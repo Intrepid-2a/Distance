@@ -398,6 +398,9 @@ def doDistanceTask(ID=None, hemifield=None):
 
         cfg['hw']['tracker'].startcollecting()
 
+        # the block of code below seems not to have any purpose... except wait for .5 seconds?
+        # unless this was supposed to do the wait for fixation function? (called a few lines above here)
+
         # gaze_out = False # unnecessary variable?
         # while True and not abort:
         #     # Start detecting time
@@ -532,28 +535,30 @@ def doDistanceTask(ID=None, hemifield=None):
         
             # auto recalibrate if no initial fixation
             if recalibrate:
+                # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                visual.TextStim(cfg['hw']['win'],'Calibration...', color = [-1, -1, -1], units = 'deg', pos = (0,-2)).draw()
+                fixation.draw()
+                cfg['hw']['win'].flip()
+                k = event.waitKeys()
+                if k[0] in ['q']:
+                    respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                    break
+                    
+                #!!# calibrate
                 cfg['hw']['tracker'].stopcollecting() # do we even have to stop/start collecting?
                 cfg['hw']['tracker'].calibrate()
                 cfg['hw']['tracker'].startcollecting()
                 recalibrate = False
 
-                # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
-                # fixation.draw()
-                # cfg['hw']['win'].flip()
-                # k = event.waitKeys()
-                # if k[0] in ['q']:
-                #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                #     break
-                    
-                # #!!# calibrate
                 
-                # fixation.draw()
-                # cfg['hw']['win'].flip()
-                # k = event.waitKeys()
-                # if k[0] in ['q']:
-                #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                #     break
+                fixation.draw()
+                cfg['hw']['win'].flip()
+                k = event.waitKeys()
+                if k[0] in ['q']:
+                    respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                    break
             
+
             # changing fixation to signify gaze out, restart with 'up' possibily of break and manual recalibration 'r' 
 
             # can't we just skip this whole part? in 99% of trials we'd just need to recalibrate... but now you have to press a button, and not the wrong one
@@ -577,26 +582,27 @@ def doDistanceTask(ID=None, hemifield=None):
         
                 # manual recalibrate
                 if k[0] in ['r']:
+
+                    # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
+                    visual.TextStim(cfg['hw']['win'],'Calibration...', color = [-1,-1,-1], units = 'deg', pos = (0,-2)).draw()
+                    fixation.draw()
+                    cfg['hw']['win'].flip()
+                    k = event.waitKeys()
+                    if k[0] in ['q']:
+                        respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                        break
+
+                    #!!# calibrate
                     cfg['hw']['tracker'].stopcollecting() # do we even have to stop/start collecting?
                     cfg['hw']['tracker'].calibrate()
                     cfg['hw']['tracker'].startcollecting()
 
-                    # visual.TextStim(cfg['hw']['win'],'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
-                    # fixation.draw()
-                    # cfg['hw']['win'].flip()
-                    # k = event.waitKeys()
-                    # if k[0] in ['q']:
-                    #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                    #     break
-
-                    # #!!# calibrate
-
-                    # fixation.draw()
-                    # cfg['hw']['win'].flip()
-                    # k = event.waitKeys()
-                    # if k[0] in ['q']:
-                    #     respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
-                    #     break
+                    fixation.draw()
+                    cfg['hw']['win'].flip()
+                    k = event.waitKeys()
+                    if k[0] in ['q']:
+                        respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
+                        break
                 
             position[which_stair] = position[which_stair] + [pos]
             increment = False
