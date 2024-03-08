@@ -290,6 +290,7 @@ def doDistanceTask(ID=None, hemifield=None):
     cfg['hw']['tracker'].initialize()
     cfg['hw']['tracker'].calibrate()
     cfg['hw']['tracker'].startcollecting()
+    cfg['hw']['tracker'].openfile()
 
     # I don't know what the next wait does, other than stop the experiment for no apparent reason?
 
@@ -483,21 +484,21 @@ def doDistanceTask(ID=None, hemifield=None):
 
                 fixation.draw()
         
-                if .1 <= trial_clock.getTime() < .5:
+                if .1 <= t < .5:
                     if len(stim_comments) == 4:
-                        cfg['hw']['tracker'].comment(stim_comments.pop())
+                        cfg['hw']['tracker'].comment(stim_comments.pop()) # pair 1 on
                     point_1.draw()
                     point_2.draw()
-                elif .5 <= trial_clock.getTime() < 0.9:
+                elif .5 <= t < 0.9:
                     if len(stim_comments) == 3:
-                        cfg['hw']['tracker'].comment(stim_comments.pop())
+                        cfg['hw']['tracker'].comment(stim_comments.pop()) # pair 2 on
                     point_1.draw()
                     point_2.draw()
                     point_3.draw()
                     point_4.draw()
-                elif 0.9 <= trial_clock.getTime() < 1.3:
+                elif 0.9 <= t < 1.3:
                     if len(stim_comments) == 2:
-                        cfg['hw']['tracker'].comment(stim_comments.pop())
+                        cfg['hw']['tracker'].comment(stim_comments.pop()) # pair 1 off
                     point_3.draw()
                     point_4.draw()
                 
@@ -512,7 +513,7 @@ def doDistanceTask(ID=None, hemifield=None):
                     
             #!!# stop recording/clear events
             if len(stim_comments) == 1:
-                cfg['hw']['tracker'].comment(stim_comments.pop())
+                cfg['hw']['tracker'].comment(stim_comments.pop()) # pair 2 off
 
 
         if abort:
@@ -548,8 +549,8 @@ def doDistanceTask(ID=None, hemifield=None):
                 targ_chosen = 'abort'
                 reversal = 'abort'
             else:
-                cfg['hw']['tracker'].comment('response')
                 resp = 1 if k[0] == 'left' else 2
+                cfg['hw']['tracker'].comment('response %d'%(resp))
                 
             fixation.ori -= 45
             
@@ -702,10 +703,9 @@ def doDistanceTask(ID=None, hemifield=None):
     k = event.waitKeys()
 
     #!!# close eye-tracker
-
-    cfg['hw']['tracker'].closefile()
     cfg['hw']['tracker'].stopcollecting()
+    cfg['hw']['tracker'].closefile()
     cfg['hw']['tracker'].shutdown() # this should download the EyeLink edf file as well as close the connection
     cfg['hw']['win'].close()
-    core.quit() # is this necessary? or good?
+    core.quit() # is this necessary? or good? I keep getting errors right here
 
