@@ -141,15 +141,24 @@ def doDistanceTask(ID=None, hemifield=None):
 
     ## colour (eye) parameters
     # col_file = open(glob(main_path + 'mapping_data/' + ID + '_col_cal*.txt')[-1],'r')
-    col_file = open(glob('../data/color/' + ID + '_col_cal*.txt')[-1],'r')
+    col_file = open(glob('../data/distance/color/' + ID + '_col_cal*.txt')[-1],'r')
     col_param = col_file.read().replace('\t','\n').split('\n')
     col_file.close()
-    col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
-    col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
-    # col_back = [ 0.5, 0.5,  -1.0]
-    # col_both = [-0.7, -0.7, -0.7] 
+    col_left  = eval(col_param[3])
+    col_right = eval(col_param[5])
+    col_ipsi  = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
+    col_cont  = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
+    # col_both = [-0.7, -0.7, -0.7] # now dependent on calibrated colors:
+    col_both = [eval(col_param[3])[1], eval(col_param[5])[0], -1]
+    # should this come from setupLocalization?
+    col_back = [ 0.5, 0.5,  -1.0]
+    # YES: the background should be slightly different on each location
 
-
+    colors = { 'left'   : col_left, 
+               'right'  : col_right,
+               'both'   : col_both,
+               'ipsi'   : col_ipsi,
+               'cont'   : col_cont }    # maybe this could be fed to the localizeSetup function, and the euetracker thing as well
 
 
     ## window & elements
