@@ -19,9 +19,11 @@ import numpy as np
 import random, datetime, os
 from glob import glob
 from itertools import compress
-from fusion_stim import fusionStim
+# from fusion_stim import fusionStim
 
-#!!# import eye tracking dependencies
+import sys, os
+sys.path.append(os.path.join('..', 'EyeTracking'))
+from EyeTracking import localizeSetup, EyeTracker
 
 ######
 #### Initialize experiment
