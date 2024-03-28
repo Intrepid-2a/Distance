@@ -34,10 +34,7 @@ def doDistanceTask(ID=None, hemifield=None):
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
     letter_height = 40
 
-    # ## path
-    # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
-    # data_path = main_path + 'data/'
-    
+  
 
     ## files
     # expInfo = {'ID':'test', 'hemifield':['left','right']}
@@ -61,6 +58,16 @@ def doDistanceTask(ID=None, hemifield=None):
     if hemifield == None:
         hemifield = expInfo['hemifield']
 
+    # ## path
+    # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
+    # data_path = main_path + 'data/'
+    main_path = '../data/distance/'
+    data_path = main_path + ID + '/'
+    eyetracking_path = main_path + 'eyetracking/' + ID + '/'
+    
+    # this _should_ already be handled by the Runner utility: setupDataFolders()
+    os.makedirs(data_path, exist_ok=True)
+    os.makedirs(eyetracking_path, exist_ok=True)
 
     x = 1
     filename = 'dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
