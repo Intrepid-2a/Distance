@@ -32,7 +32,7 @@ def doDistanceTask(ID=None, hemifield=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40
+    letter_height = 40 # 40 dva is pretty big
 
   
 
@@ -69,6 +69,8 @@ def doDistanceTask(ID=None, hemifield=None):
     os.makedirs(data_path, exist_ok=True)
     os.makedirs(eyetracking_path, exist_ok=True)
 
+
+    # create output file:
     x = 1
     # filename = '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
     filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
@@ -105,58 +107,86 @@ def doDistanceTask(ID=None, hemifield=None):
         "Gaze_out",
         "Stair")
 
-    ## blindspot parameters
-    bs_file = open(glob(main_path + 'mapping_data/' + ID + '_LH_blindspot*.txt')[-1], 'r')
-    bs_param = bs_file.read().replace('\t','\n').split('\n')
-    bs_file.close()
-    spot_left_cart = eval(bs_param[1])
-    spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
-    spot_left_size = eval(bs_param[3])
+    # ## blindspot parameters
+    # bs_file = open(glob(main_path + 'mapping/' + ID + '_LH_blindspot*.txt')[-1], 'r')
+    # bs_param = bs_file.read().replace('\t','\n').split('\n')
+    # bs_file.close()
+    # spot_left_cart = eval(bs_param[1])
+    # spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
+    # spot_left_size = eval(bs_param[3])
 
-    bs_file = open(glob(main_path + 'mapping_data/' + ID + '_RH_blindspot*.txt')[-1],'r')
-    bs_param = bs_file.read().replace('\t','\n').split('\n')
-    bs_file.close()
-    spot_righ_cart = eval(bs_param[1])
-    spot_righ = cart2pol(spot_righ_cart[0], spot_righ_cart[1])
-    spot_righ_size = eval(bs_param[3])
+    # bs_file = open(glob(main_path + 'mapping/' + ID + '_RH_blindspot*.txt')[-1],'r')
+    # bs_param = bs_file.read().replace('\t','\n').split('\n')
+    # bs_file.close()
+    # spot_righ_cart = eval(bs_param[1])
+    # spot_righ = cart2pol(spot_righ_cart[0], spot_righ_cart[1])
+    # spot_righ_size = eval(bs_param[3])
 
-    if hemifield == 'left':
-        spot_cart = spot_left_cart
-        spot      = spot_left
-        spot_size = spot_left_size
-    else:
-        spot_cart = spot_righ_cart
-        spot      = spot_righ
-        spot_size = spot_righ_size
 
-    '''
-    distance of reference between dots (target)
-    => width of blindspot + 2 (dot width, padding) + 2 (to account for a max jitter of 1 on either side)
-    '''
-    tar =  spot_size[0] + 2 + 2
+    # if hemifield == 'left':
+    #     spot_cart = spot_left_cart
+    #     spot      = spot_left
+    #     spot_size = spot_left_size
+    # else:
+    #     spot_cart = spot_righ_cart
+    #     spot      = spot_righ
+    #     spot_size = spot_righ_size
 
-    # size of blind spot + 2 (dot width, padding)
-    if hemifield == 'left' and spot_cart[1] < 0:
-        ang_up = (cart2pol(spot_cart[0], spot_cart[1] - spot_size[1])[0] - spot[0]) + 2
-    else:
-        ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
+    # '''
+    # distance of reference between dots (target)
+    # => width of blindspot + 2 (dot width, padding) + 2 (to account for a max jitter of 1 on either side)
+    # '''
+    # tar =  spot_size[0] + 2 + 2
 
-    ## colour (eye) parameters
-    col_file = open(glob(main_path + 'mapping_data/' + ID + '_col_cal*.txt')[-1],'r')
-    col_param = col_file.read().replace('\t','\n').split('\n')
-    col_file.close()
-    col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
-    col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
-    col_back = [ 0.55, 0.45,  -1.0] #changed by belen to prevent red bleed
-    col_both = [-0.7, -0.7, -0.7] 
+    # # size of blind spot + 2 (dot width, padding)
+    # if hemifield == 'left' and spot_cart[1] < 0:
+    #     ang_up = (cart2pol(spot_cart[0], spot_cart[1] - spot_size[1])[0] - spot[0]) + 2
+    # else:
+    #     ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
+
+    # ## colour (eye) parameters
+    # col_file = open(glob(main_path + 'color/' + ID + '_col_cal*.txt')[-1],'r')
+    # col_param = col_file.read().replace('\t','\n').split('\n')
+    # col_file.close()
+    # col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
+    # col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
+    # col_back = [ 0.55, 0.45,  -1.0] #changed by belen to prevent red bleed
+    # col_both = [-0.7, -0.7, -0.7] 
 
     ## window & elements
-    win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
-    win.mouseVisible = False
-    fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
+    # win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
+    # win.mouseVisible = False
+    # fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
 
-    hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
-    loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
+    # hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
+    # loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
+
+
+    x = 1
+    et_filename = 'dist' + ('LH' if hemifield == 'left' else 'RH')
+    while len(glob(eyetracking_path + et_filename + str(x) + '.*')):
+        x += 1
+
+    # get everything shared from central:
+    setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
+
+    win = setup['win']
+
+    colors = setup['colors']
+    col_both = colors['both']
+    if hemifield == 'left':
+        col_ipsi, col_contra = colors['left'], colors['right']
+    if hemifield == 'right':
+        col_contra, col_ipsi = colors['left'], colors['right']
+
+    hiFusion = setup['fusion']['hi']
+    loFusion = setup['fusion']['lo']
+
+    blindspot = setup['blindspotmarkers'][hemifield]
+    
+    
+
+
 
     ## instructions
     visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
@@ -181,9 +211,9 @@ def doDistanceTask(ID=None, hemifield=None):
     point_3 = visual.Circle(win, radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
     point_4 = visual.Circle(win, radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
 
-    blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
-    blindspot.pos = spot_cart
-    blindspot.size = spot_size
+    # blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
+    # blindspot.pos = spot_cart
+    # blindspot.size = spot_size
     blindspot.autoDraw = True 
 
     ## prepare trials
