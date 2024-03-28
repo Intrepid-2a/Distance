@@ -62,7 +62,7 @@ def doDistanceTask(ID=None, hemifield=None):
     # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
     # data_path = main_path + 'data/'
     main_path = '../data/distance/'
-    data_path = main_path + ID + '/'
+    data_path = main_path
     eyetracking_path = main_path + 'eyetracking/' + ID + '/'
     
     # this _should_ already be handled by the Runner utility: setupDataFolders()
@@ -70,7 +70,8 @@ def doDistanceTask(ID=None, hemifield=None):
     os.makedirs(eyetracking_path, exist_ok=True)
 
     x = 1
-    filename = 'dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
+    # filename = '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
+    filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
     while (filename + str(x) + '.txt') in os.listdir(data_path):
         x += 1
     respFile = open(data_path + filename + str(x) + '.txt','w')
