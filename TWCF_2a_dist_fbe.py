@@ -170,6 +170,7 @@ def doDistanceTask(ID=None, hemifield=None):
     # get everything shared from central:
     setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
 
+    # unpack all this
     win = setup['win']
 
     colors = setup['colors']
@@ -184,6 +185,9 @@ def doDistanceTask(ID=None, hemifield=None):
 
     blindspot = setup['blindspotmarkers'][hemifield]
     
+    fixation = setup['fixation']
+
+    tracker = setup['tracker']
     
 
 
