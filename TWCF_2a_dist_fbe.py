@@ -28,11 +28,12 @@ from EyeTracking import localizeSetup, EyeTracker
 ######
 #### Initialize experiment
 ######
-def doDistanceTask(ID=None, hemifield=None):
+
+def doDistanceTask(ID=None, hemifield=None, location=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40 # 40 dva is pretty big
+    letter_height = 40 # 40 dva is pretty big?
 
   
 
@@ -57,6 +58,16 @@ def doDistanceTask(ID=None, hemifield=None):
         ID = expInfo['ID'].lower()
     if hemifield == None:
         hemifield = expInfo['hemifield']
+
+    # need to know which eye-tracker to use:
+    if location == None:
+        # hacky, but true for now:
+        if os.sys.platform == 'linux':
+            location = 'toronto'
+        else:
+            location = 'glasgow'
+
+    trackEyes = [True, True]
 
     # ## path
     # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
@@ -168,7 +179,7 @@ def doDistanceTask(ID=None, hemifield=None):
         x += 1
 
     # get everything shared from central:
-    setup = localizeSetup(location=location, glasses=glasses, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
+    setup = localizeSetup(location=location, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
 
     # unpack all this
     win = setup['win']
@@ -585,3 +596,7 @@ def doDistanceTask(ID=None, hemifield=None):
     k = event.waitKeys()
 
     #!!# close eye-tracker (eye-tracker object requires the window object - which should also be closed... but only after this last message)
+
+
+if __name__ == "__main__":
+    doDistanceTask()
