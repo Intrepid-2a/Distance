@@ -19,11 +19,10 @@ import numpy as np
 import random, datetime, os
 from glob import glob
 from itertools import compress
-# from fusion_stim import fusionStim
 
 import sys, os
 sys.path.append(os.path.join('..', 'EyeTracking'))
-from EyeTracking import localizeSetup, EyeTracker
+from EyeTracking import localizeSetup, EyeTracker, fusionStim
 
 ######
 #### Initialize experiment
@@ -33,33 +32,10 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40 # 40 dva is pretty big?
+    letter_height = 40
 
-  
-
-    ## files
-    # expInfo = {'ID':'test', 'hemifield':['left','right']}
-    # dlg = gui.DlgFromDict(expInfo, title='Infos', screen=0)
-    # ID = expInfo['ID'].lower()
-    # hemifield = expInfo['hemifield']
-    expInfo = {}
-    askQuestions = False
-    if ID == None:
-        expInfo['ID'] = ''
-        askQuestions = True
-    if hemifield == None:
-        expInfo['hemifield'] = ['left','right']
-        askQuestions = True
-    # expInfo = {'ID':'test', 'hemifield':['left','right']}
-    if askQuestions:
-        dlg = gui.DlgFromDict(expInfo, title='Infos', screen=0)
-
-    if ID == None:
-        ID = expInfo['ID'].lower()
-    if hemifield == None:
-        hemifield = expInfo['hemifield']
-
-    # need to know which eye-tracker to use:
+    
+    # site specific handling
     if location == None:
         # hacky, but true for now:
         if os.sys.platform == 'linux':
@@ -67,28 +43,159 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         else:
             location = 'glasgow'
 
-    trackEyes = [True, True]
-
-    # ## path
-    # main_path = 'C:/Users/clementa/Nextcloud/project_blindspot/blindspot_eye_tracker/'
-    # data_path = main_path + 'data/'
-    main_path = '../data/distance/'
-    data_path = main_path
-    eyetracking_path = main_path + 'eyetracking/' + ID + '/'
+    if location == 'glasgow':
+        
+        ## path
+        expInfo = {'ID':'test', 'hemifield':['left','right']}
+        dlg = gui.DlgFromDict(expInfo, title='Infos', screen=0)
+        ID = expInfo['ID'].lower()
+        hemifield = expInfo['hemifield']
+        
+        main_path = '../data/distance/'
+        data_path = main_path
+        eyetracking_path = main_path + 'eyetracking/' + ID + '/'
+        
+        x = 1
+        filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
+        while (filename + str(x) + '.txt') in os.listdir(data_path):
+            x += 1
+        
+        ## blindspot
+        bs_file = open(glob(main_path + 'mapping/' + ID + '_LH_blindspot*.txt')[-1], 'r')
+        bs_param = bs_file.read().replace('\t','\n').split('\n')
+        bs_file.close()
+        spot_left_cart = eval(bs_param[1])
+        spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
+        spot_left_size = eval(bs_param[3])
     
-    # this _should_ already be handled by the Runner utility: setupDataFolders()
-    os.makedirs(data_path, exist_ok=True)
-    os.makedirs(eyetracking_path, exist_ok=True)
+        bs_file = open(glob(main_path + 'mapping/' + ID + '_RH_blindspot*.txt')[-1],'r')
+        bs_param = bs_file.read().replace('\t','\n').split('\n')
+        bs_file.close()
+        spot_righ_cart = eval(bs_param[1])
+        spot_righ = cart2pol(spot_righ_cart[0], spot_righ_cart[1])
+        spot_righ_size = eval(bs_param[3])
+    
+        if hemifield == 'left':
+            spot_cart = spot_left_cart
+            spot      = spot_left
+            spot_size = spot_left_size
+        else:
+            spot_cart = spot_righ_cart
+            spot      = spot_righ
+            spot_size = spot_righ_size
+    
+        '''
+        distance of reference between dots (target)
+        => width of blindspot + 2 (dot width, padding) + 2 (to account for a max jitter of 1 on either side)
+        '''
+        tar =  spot_size[0] + 2 + 2
+    
+        # size of blind spot + 2 (dot width, padding)
+        if hemifield == 'left' and spot_cart[1] < 0:
+            ang_up = (cart2pol(spot_cart[0], spot_cart[1] - spot_size[1])[0] - spot[0]) + 2
+        else:
+            ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
+    
+        ## colours
+        col_file = open(glob(main_path + 'color/' + ID + '_col_cal*.txt')[-1],'r')
+        col_param = col_file.read().replace('\t','\n').split('\n')
+        col_file.close()
+        col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
+        col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
+        colors['back']   = [ 0.55,  0.45, -1.00]  #changed by belen to prevent red bleed
+        col_both = [eval(col_param[3])[1], eval(col_param[5])[0], -1] 
+    
+        ## window & elements
+        win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='deg', viewPos = [0,0], fullscr = True, color= col_back)
+        win.mouseVisible = False
+        fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
+    
+        fcols = [colors['both'],colors['back']]
+        hiFusion = fusionStim(win    = win, pos    = [0, 7], colors = fcols)
+        loFusion = fusionStim(win    = win, pos    = [0,-7], colors = fcols)
+        
+        blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
+        blindspot.pos = spot_cart
+        blindspot.size = spot_size
+        
+        ## eyetracking
+        tracker = EyeTracker(tracker           = 'eyelink',
+                             trackEyes         = [True, True],
+                             fixationWindow    = 2.0,
+                             minFixDur         = 0.2,
+                             fixTimeout        = 3.0,
+                             psychopyWindow    = win,
+                             filefolder        = filefolder,
+                             filename          = filename,
+                             samplemode        = 'average',
+                             calibrationpoints = 5,
+                             colors            = colors )                            
+        
+    elif location == 'toronto':
+    
+        # not sure what you want to do here, maybe check if parameters are defined, otherwise throw an error? Or keep the gui in that case?
+        
+        expInfo = {}
+        askQuestions = False
+        if ID == None:
+            expInfo['ID'] = ''
+            askQuestions = True
+        if hemifield == None:
+            expInfo['hemifield'] = ['left','right']
+            askQuestions = True
+        if askQuestions:
+            dlg = gui.DlgFromDict(expInfo, title='Infos', screen=0)
+
+        if ID == None:
+            ID = expInfo['ID'].lower()
+        if hemifield == None:
+            hemifield = expInfo['hemifield']
+        
+        ## path
+        main_path = '../data/distance/'
+        data_path = main_path
+        eyetracking_path = main_path + 'eyetracking/' + ID + '/'
+        
+        # this _should_ already be handled by the Runner utility: setupDataFolders()
+        # beyond that, the paradigm needs calibration files so we should probably let it crash if the path doesn't already exist
+        os.makedirs(data_path, exist_ok=True)
+        os.makedirs(eyetracking_path, exist_ok=True)
+        
+        x = 1
+        filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
+        while (filename + str(x) + '.txt') in os.listdir(data_path):
+            x += 1
+        
+        trackEyes = [True, True]
+        
+        # get everything shared from central:
+        setup = localizeSetup(location=location, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
+    
+        # unpack all this
+        win = setup['win']
+    
+        colors = setup['colors']
+        col_both = colors['both']
+        if hemifield == 'left':
+            col_ipsi, col_contra = colors['left'], colors['right']
+        if hemifield == 'right':
+            col_contra, col_ipsi = colors['left'], colors['right']
+    
+        hiFusion = setup['fusion']['hi']
+        loFusion = setup['fusion']['lo']
+    
+        blindspot = setup['blindspotmarkers'][hemifield]
+        
+        fixation = setup['fixation']
+    
+        tracker = setup['tracker']
+        
+    else:
+        raise ValueError("Location should be 'glasgow' or 'toronto', was {}".format(location))
 
 
     # create output file:
-    x = 1
-    # filename = '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_' + ID + '_'
-    filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
-    while (filename + str(x) + '.txt') in os.listdir(data_path):
-        x += 1
     respFile = open(data_path + filename + str(x) + '.txt','w')
-
     respFile.write(''.join(map(str, ['Start: \t' + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M') + '\n'])))
     respFile.write('\t'.join(map(str, ['Resp',
                                     'Targ_loc',
@@ -117,91 +224,10 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         "Eye",
         "Gaze_out",
         "Stair")
-
-    # ## blindspot parameters
-    # bs_file = open(glob(main_path + 'mapping/' + ID + '_LH_blindspot*.txt')[-1], 'r')
-    # bs_param = bs_file.read().replace('\t','\n').split('\n')
-    # bs_file.close()
-    # spot_left_cart = eval(bs_param[1])
-    # spot_left = cart2pol(spot_left_cart[0], spot_left_cart[1])
-    # spot_left_size = eval(bs_param[3])
-
-    # bs_file = open(glob(main_path + 'mapping/' + ID + '_RH_blindspot*.txt')[-1],'r')
-    # bs_param = bs_file.read().replace('\t','\n').split('\n')
-    # bs_file.close()
-    # spot_righ_cart = eval(bs_param[1])
-    # spot_righ = cart2pol(spot_righ_cart[0], spot_righ_cart[1])
-    # spot_righ_size = eval(bs_param[3])
-
-
-    # if hemifield == 'left':
-    #     spot_cart = spot_left_cart
-    #     spot      = spot_left
-    #     spot_size = spot_left_size
-    # else:
-    #     spot_cart = spot_righ_cart
-    #     spot      = spot_righ
-    #     spot_size = spot_righ_size
-
-    # '''
-    # distance of reference between dots (target)
-    # => width of blindspot + 2 (dot width, padding) + 2 (to account for a max jitter of 1 on either side)
-    # '''
-    # tar =  spot_size[0] + 2 + 2
-
-    # # size of blind spot + 2 (dot width, padding)
-    # if hemifield == 'left' and spot_cart[1] < 0:
-    #     ang_up = (cart2pol(spot_cart[0], spot_cart[1] - spot_size[1])[0] - spot[0]) + 2
-    # else:
-    #     ang_up = (cart2pol(spot_cart[0], spot_cart[1] + spot_size[1])[0] - spot[0]) + 2
-
-    # ## colour (eye) parameters
-    # col_file = open(glob(main_path + 'color/' + ID + '_col_cal*.txt')[-1],'r')
-    # col_param = col_file.read().replace('\t','\n').split('\n')
-    # col_file.close()
-    # col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
-    # col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
-    # col_back = [ 0.55, 0.45,  -1.0] #changed by belen to prevent red bleed
-    # col_both = [-0.7, -0.7, -0.7] 
-
-    ## window & elements
-    # win = visual.Window([1500,800],allowGUI=True, monitor='ExpMon',screen=1, units='pix', viewPos = [0,0], fullscr = True, color= col_back)
-    # win.mouseVisible = False
-    # fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
-
-    # hiFusion = fusionStim(win=win, pos=[0, 0.7], units = 'norm', col = [col_back, col_both])
-    # loFusion = fusionStim(win=win, pos=[0,-0.7], units = 'norm', col = [col_back, col_both])
-
-
     x = 1
     et_filename = 'dist' + ('LH' if hemifield == 'left' else 'RH')
     while len(glob(eyetracking_path + et_filename + str(x) + '.*')):
         x += 1
-
-    # get everything shared from central:
-    setup = localizeSetup(location=location, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
-
-    # unpack all this
-    win = setup['win']
-
-    colors = setup['colors']
-    col_both = colors['both']
-    if hemifield == 'left':
-        col_ipsi, col_contra = colors['left'], colors['right']
-    if hemifield == 'right':
-        col_contra, col_ipsi = colors['left'], colors['right']
-
-    hiFusion = setup['fusion']['hi']
-    loFusion = setup['fusion']['lo']
-
-    blindspot = setup['blindspotmarkers'][hemifield]
-    
-    fixation = setup['fixation']
-
-    tracker = setup['tracker']
-    
-
-
 
     ## instructions
     visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
@@ -226,9 +252,6 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     point_3 = visual.Circle(win, radius = .5, pos = pol2cart(45, 3), units = 'deg', fillColor = col_both, lineColor = None)
     point_4 = visual.Circle(win, radius = .5, pos = pol2cart(45, 6), units = 'deg', fillColor = col_both, lineColor = None)
 
-    # blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
-    # blindspot.pos = spot_cart
-    # blindspot.size = spot_size
     blindspot.autoDraw = True 
 
     ## prepare trials
@@ -244,14 +267,14 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     if hemifield == 'left':
         # First column is target, second column is foil
         pos_array = [["left-mid", "left-top"],
-                    ["left-mid", "left-bot"],
-                    ["left-top", "left-bot"],
-                    ["left-bot", "left-top"]]
+                     ["left-mid", "left-bot"],
+                     ["left-top", "left-bot"],
+                     ["left-bot", "left-top"]]
     else:
         pos_array = [["righ-mid", "righ-top"],
-                    ["righ-mid", "righ-bot"],
-                    ["righ-top", "righ-bot"],
-                    ["righ-bot", "righ-top"]]
+                     ["righ-mid", "righ-bot"],
+                     ["righ-top", "righ-bot"],
+                     ["righ-bot", "righ-top"]]
 
     pos_array_bsa = pos_array[0:2]
     pos_array_out = pos_array[2:4]
