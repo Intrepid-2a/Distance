@@ -33,8 +33,8 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40 # 40 dva is pretty big?
-
+    # letter_height = 40 # 40 dva is pretty big?
+    letter_height = 2
   
 
     ## files
@@ -78,6 +78,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     
     # this _should_ already be handled by the Runner utility: setupDataFolders()
     os.makedirs(data_path, exist_ok=True)
+    # but not this one:
     os.makedirs(eyetracking_path, exist_ok=True)
 
 
@@ -271,10 +272,20 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     k = event.waitKeys()
     if k[0] in ['q']:
         respFile.close()
+
+        # send quit comment
+        # stop tracking
+        # close file
+        # shutdown eye-tracker
+
         win.close()
         core.quit()
         
     #!!# calibrate
+    tracker.initialize()
+    tracker.calibrate()
+    tracker.startcollecting()
+    tracker.openfile()
 
     fixation.draw()
     win.flip()
@@ -282,6 +293,12 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     k = event.waitKeys()
     if k[0] in ['q']:
         respFile.close()
+
+        # send quit comment
+        # stop tracking
+        # close file
+        # shutdown eye-tracker
+
         win.close()
         core.quit()
 
@@ -354,37 +371,50 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         loFusion.resetProperties()
 
         ## pre trial fixation
-        trial_clock.reset()
-        gaze_out = False
-        while True and not abort:
-            # Start detecting time
-            t = trial_clock.getTime()
-            
-            #!!# get position at each t
-            #!!# every 100 ms, check that positions were on average <2 dva from center
-            #!!# after 5 consecutive intervals (500 ms) with correct fixation, break to start trial
-            #!!# for now we break automatically:
-            if t > .5:
-                break
-            #!!#
+        tracker.waitForFixation()
+        gaze_out = False #? not sure what this variable is for but it needs to exist
 
-            hiFusion.draw()
-            loFusion.draw()
-            fixation.draw()
-            win.flip()
+        # not sure, but the next while loop seems to be doing the same thing as "waitForFixation()"
+        # 
 
-            k = event.getKeys(['q'])
-            if k:
-                if 'q' in k:
-                    abort = True
-                    break
+        # trial_clock.reset()
+        # gaze_out = False
+        # while True and not abort:
+        #     # Start detecting time
+        #     t = trial_clock.getTime()
             
-            # set up auto recalibrate after 5s
-            if t > 5:
-                recalibrate = True
-                gaze_out = True
-                break
+        #     #!!# get position at each t
+        #     #!!# every 100 ms, check that positions were on average <2 dva from center
+        #     #!!# after 5 consecutive intervals (500 ms) with correct fixation, break to start trial
+        #     #!!# for now we break automatically:
+        #     if t > .5:
+        #         break
+        #     #!!#
+
+        #     hiFusion.draw()
+        #     loFusion.draw()
+        #     fixation.draw()
+        #     win.flip()
+
+        #     k = event.getKeys(['q'])
+        #     if k:
+        #         if 'q' in k:
+        #             abort = True
+        #             break
+            
+        #     # set up auto recalibrate after 5s
+        #     if t > 5:
+        #         recalibrate = True
+        #         gaze_out = True
+        #         break
         
+        # should the trial start be here, or maybe when waiting for fixation?
+        tracker.comment('start trial %d'%(trial))
+
+        # in reverse order, so we can pop() them off:
+        stim_comments = ['pair 2 off', 'pair 1 off', 'pair 2 on', 'pair 1 on']
+
+
         if not gaze_out:
             ## trial
             
@@ -402,32 +432,42 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
                 #!!# if position is invalid or >2 dva, set gaze in region to False
                 #!!# may also record gazes in file here and do stuff like showing gaze position if simulating with mouse
                 
-                if not gaze_in_region:
+                if not tracker.gazeInFixationWindow():
                     gaze_out = True
                     break
-                    
+
+                fixation.draw()            
                 hiFusion.draw()
                 loFusion.draw()
-                fixation.draw()
-        
+
                 if .1 <= trial_clock.getTime() < .5:
+                    if len(stim_comments) == 4:
+                        tracker.comment(stim_comments.pop()) # pair 1 on
                     point_1.draw()
                     point_2.draw()
                 elif .5 <= trial_clock.getTime() < 0.9:
+                    if len(stim_comments) == 3:
+                        tracker.comment(stim_comments.pop()) # pair 2 on
                     point_1.draw()
                     point_2.draw()
                     point_3.draw()
                     point_4.draw()
                 elif 0.9 <= trial_clock.getTime() < 1.3:
+                    if len(stim_comments) == 2:
+                        tracker.comment(stim_comments.pop()) # pair 1 off
                     point_3.draw()
                     point_4.draw()
         
+                blindspot.draw()
                 win.flip()
                 
                 k = event.getKeys(['q'])
                 if k and 'q' in k:
                     abort = True
                     break
+
+            if len(stim_comments) == 1:
+                tracker.comment(stim_comments.pop()) # pair 2 off
 
         if abort:
             break
@@ -475,6 +515,11 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
                     break
                     
                 #!!# calibrate
+                tracker.stopcollecting() # do we even have to stop/start collecting?
+                tracker.calibrate()
+                tracker.startcollecting()
+                recalibrate = False
+
                 
                 fixation.draw()
                 win.flip()
@@ -507,6 +552,9 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
                         break
 
                     #!!# calibrate
+                    tracker.stopcollecting() # do we even have to stop/start collecting?
+                    tracker.calibrate()
+                    tracker.startcollecting()
 
                     fixation.draw()
                     win.flip()
@@ -581,13 +629,22 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         respFile = open(data_path + filename + str(x) + '.txt','a')
         respFile.write("Run manually ended at " + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M") + "!")
         respFile.close()
+        tracker.comment('run aborted')
+        # stop collecting?
+        # close file?
+        # shutdown eye-tracker?
     elif not any(stairs_ongoing):
+        tracker.comment('run finished')
         print('run ended properly!')
 
     print(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
     blindspot.autoDraw = False
 
     #!!# stop recording
+
+    # tracker.stopcollecting()
+    # tracker.closefile()
+    # tracker.shutdown()
 
 
     ## last screen
