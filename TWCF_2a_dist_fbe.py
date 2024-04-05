@@ -32,7 +32,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     ## parameters
     nRevs   = 10   #
     nTrials = 30  # at least 10 reversals and 30 trials for each staircase (~ 30*8 staircases = 250 trials)
-    letter_height = 40
+    letter_height = 1
 
     
     # site specific handling
@@ -55,10 +55,17 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         data_path = main_path
         eyetracking_path = main_path + 'eyetracking/' + ID + '/'
         
+        os.makedirs(data_path, exist_ok=True)
+        os.makedirs(eyetracking_path, exist_ok=True)
+        
         x = 1
         filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
         while (filename + str(x) + '.txt') in os.listdir(data_path):
             x += 1
+        y = 1
+        et_filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
+        while len(glob(eyetracking_path + et_filename + str(y) + '.*')):
+            y += 1
         
         ## blindspot
         bs_file = open(glob(main_path + 'mapping/' + ID + '_LH_blindspot*.txt')[-1], 'r')
@@ -102,7 +109,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         col_file.close()
         col_ipsi = eval(col_param[3]) if hemifield == 'left' else eval(col_param[5]) # left or right
         col_cont = eval(col_param[5]) if hemifield == 'left' else eval(col_param[3]) # right or left
-        colors['back']   = [ 0.55,  0.45, -1.00]  #changed by belen to prevent red bleed
+        col_back = [ 0.55,  0.45, -1.00]  #changed by belen to prevent red bleed
         col_both = [eval(col_param[3])[1], eval(col_param[5])[0], -1] 
     
         ## window & elements
@@ -110,7 +117,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         win.mouseVisible = False
         fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
     
-        fcols = [colors['both'],colors['back']]
+        fcols = [col_both,col_back]
         hiFusion = fusionStim(win    = win, pos    = [0, 7], colors = fcols)
         loFusion = fusionStim(win    = win, pos    = [0,-7], colors = fcols)
         
@@ -118,6 +125,10 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         blindspot.pos = spot_cart
         blindspot.size = spot_size
         
+        colors = {'ipsi'   : col_ipsi,
+                  'cont'   : col_cont,
+                  'both'   : col_both,
+                  'back'   : col_back} 
         ## eyetracking
         tracker = EyeTracker(tracker           = 'eyelink',
                              trackEyes         = [True, True],
@@ -125,8 +136,8 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
                              minFixDur         = 0.2,
                              fixTimeout        = 3.0,
                              psychopyWindow    = win,
-                             filefolder        = filefolder,
-                             filename          = filename,
+                             filefolder        = eyetracking_path,
+                             filename          = et_filename+str(y),
                              samplemode        = 'average',
                              calibrationpoints = 5,
                              colors            = colors )                            
@@ -134,6 +145,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     elif location == 'toronto':
     
         # not sure what you want to do here, maybe check if parameters are defined, otherwise throw an error? Or keep the gui in that case?
+        
         
         expInfo = {}
         askQuestions = False
@@ -155,21 +167,25 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         main_path = '../data/distance/'
         data_path = main_path
         eyetracking_path = main_path + 'eyetracking/' + ID + '/'
-        
-        # this _should_ already be handled by the Runner utility: setupDataFolders()
-        # beyond that, the paradigm needs calibration files so we should probably let it crash if the path doesn't already exist
-        os.makedirs(data_path, exist_ok=True)
-        os.makedirs(eyetracking_path, exist_ok=True)
-        
         x = 1
         filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
         while (filename + str(x) + '.txt') in os.listdir(data_path):
             x += 1
+        y = 1
+        et_filename = ID + '_dist_' + ('LH' if hemifield == 'left' else 'RH') + '_'
+        while len(glob(eyetracking_path + et_filename + str(y) + '.*')):
+            y += 1
+        
+        # this _should_ already be handled by the Runner utility: setupDataFolders()
+        os.makedirs(data_path, exist_ok=True)
+        os.makedirs(eyetracking_path, exist_ok=True)
+        
+
         
         trackEyes = [True, True]
         
         # get everything shared from central:
-        setup = localizeSetup(location=location, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(x), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
+        setup = localizeSetup(location=location, trackEyes=trackEyes, filefolder=eyetracking_path, filename=et_filename+str(y), task='distance', ID=ID) # data path is for the mapping data, not the eye-tracker data!
     
         # unpack all this
         win = setup['win']
@@ -224,15 +240,15 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         "Eye",
         "Gaze_out",
         "Stair")
-    x = 1
-    et_filename = 'dist' + ('LH' if hemifield == 'left' else 'RH')
-    while len(glob(eyetracking_path + et_filename + str(x) + '.*')):
-        x += 1
+
 
     ## instructions
-    visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.   \
-    It is important that you fixate on this cross at all times.\n\n You will be presented with pairs of dots. You will have to indicate which dots were closer together.\n\n Left arrow = first pair of dots were closer together.\
-    \n\n Right arrow = second pair of dots were closer together.\n\n\n Press the space bar to start the experiment.', height = letter_height,wrapWidth=1200, color = 'black').draw()
+    visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.\n \
+    It is important that you fixate on this cross at all times.\n\n \
+    You will be presented with pairs of dots. You will have to indicate which dots were closer together.\n\n \
+    Left arrow = first pair of dots were closer together.\n\n \
+    Right arrow = second pair of dots were closer together.\n\n\n \
+    Press the space bar to start the experiment.', height = letter_height,wrapWidth=30, color = 'black').draw()
     win.flip()
     k = ['wait']
     while k[0] not in ['q','space']:
@@ -284,8 +300,11 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     #### Prepare eye tracking
     ######
 
-    ## setup and initialize eye-tracker + gaze ok region etc.
-    #!!#
+    ## setup and initialize eye-tracker
+    tracker.initialize()
+    #tracker.calibrate()
+    #tracker.startcollecting()
+    #tracker.openfile()
 
     # first calibration
     visual.TextStim(win,'Calibration...', color = col_both, units = 'deg', pos = (0,-2)).draw()
@@ -619,7 +638,9 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     k = event.waitKeys()
 
     #!!# close eye-tracker (eye-tracker object requires the window object - which should also be closed... but only after this last message)
-
+    tracker.shutdown()
+    win.close()
+    core.quit()
 
 if __name__ == "__main__":
     doDistanceTask()
