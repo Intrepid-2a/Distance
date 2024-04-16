@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """ 
@@ -33,7 +33,6 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     
     # site specific handling
     if location == None:
-        # hacky, but true for now:
         if os.sys.platform == 'linux':
             location = 'toronto'
         else:
@@ -113,17 +112,16 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         win.mouseVisible = False
         fixation = visual.ShapeStim(win, vertices = ((0, -2), (0, 2), (0,0), (-2, 0), (2, 0)), lineWidth = 4, units = 'pix', size = (10, 10), closeShape = False, lineColor = col_both)
     
-        fcols = [col_both,col_back]
-        hiFusion = fusionStim(win    = win, pos    = [0, 7], colors = fcols)
-        loFusion = fusionStim(win    = win, pos    = [0,-7], colors = fcols)
+        hiFusion = fusionStim(win = win, pos = [0, 7], colors = [col_both,col_back])
+        loFusion = fusionStim(win = win, pos = [0,-7], colors = [col_both,col_back]) 
         
         blindspot = visual.Circle(win, radius = .5, pos = [7,0], units = 'deg', fillColor=col_ipsi, lineColor = None)
         blindspot.pos = spot_cart
         blindspot.size = spot_size
         
+        ## eyetracking
         colors = {'both'   : col_both,
                   'back'   : col_back} 
-        ## eyetracking
         tracker = EyeTracker(tracker           = 'eyelink',
                              trackEyes         = [True, True],
                              fixationWindow    = 2.0,
@@ -134,8 +132,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
                              filename          = et_filename+str(y),
                              samplemode        = 'average',
                              calibrationpoints = 5,
-                             colors            = colors,
-                             fixationTarget    = fixation)                            
+                             colors            = colors)                            
         
     elif location == 'toronto':
     
@@ -236,6 +233,9 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         "Gaze_out",
         "Stair")
 
+    gazeFile = open(eyetracking_path + filename + str(x) + '_gaze.txt','w')
+    gazeFile.write("Trial\tStair\tTrial_stair\tTime\tGaze\n")
+    gazeFile.close()
 
     ## instructions
     visual.TextStim(win,'Troughout the experiment you will fixate at a white cross that will be located at the center of the screen.\n \
@@ -296,7 +296,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
     ######
 
     ## setup and initialize eye-tracker
-    tracker.initialize()
+    tracker.initialize(calibrationScale=(0.35, 0.35))
     tracker.calibrate()
     win.flip()
     fixation.draw()
@@ -380,10 +380,11 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         
         ## pre trial fixation
         tracker.comment('pre-fixation')
-        if not tracker.waitForFixation(fixationTarget = fixation):
+        if not tracker.waitForFixation(fixationStimuli = [fixation, hiFusion, loFusion]):
             recalibrate = True
             gaze_out = True
         
+        gazeFile = open(eyetracking_path + filename + str(x) + '_gaze.txt','a')
         if not gaze_out:
             ## trial
             stim_comments = ['pair 2 off', 'pair 1 off', 'pair 2 on', 'pair 1 on']
@@ -392,6 +393,13 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
         
             while trial_clock.getTime() < 1.3 and not abort:
                 t = trial_clock.getTime()
+                
+                gazeFile.write('\t'.join(map(str, [trial,
+                               which_stair,
+                               trial_stair[which_stair] + 1,
+                               round(t,2),
+                               tracker.lastsample()])) + "\n")
+                
                 
                 if not tracker.gazeInFixationWindow():
                     gaze_out = True
@@ -429,6 +437,7 @@ def doDistanceTask(ID=None, hemifield=None, location=None):
             
             if len(stim_comments) == 1:
                 tracker.comment(stim_comments.pop()) # pair 2 off
+            gazeFile.close()
 
         if abort:
             break

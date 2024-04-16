@@ -61,21 +61,19 @@ tracker = EyeTracker(tracker           = 'eyelink',
                      filename          = et_filename+str(y),
                      samplemode        = 'average',
                      calibrationpoints = 5,
-                     colors            = colors,
-                     fixationTarget    = fixation_yes)                            
+                     colors            = colors)                            
 
 visual.TextStim(win,'screen 1').draw()
 win.flip()
 event.waitKeys()
 
 ## setup and initialize eye-tracker
-tracker.initialize()
+tracker.initialize(calibrationScale=(0.35, 0.35))
 
 visual.TextStim(win,'screen 2').draw()
 win.flip()
 event.waitKeys()
 
-tracker.setEyeLinkCalibrationScale()
 tracker.calibrate()
 
 visual.TextStim(win,'screen 3').draw()
@@ -84,7 +82,7 @@ event.waitKeys()
 
 tracker.startcollecting()
 
-good_fixation = tracker.waitForFixation(fixationTarget = fixation_yes)
+good_fixation = tracker.waitForFixation()
 
 print('Good fixation? {}'.format(good_fixation))
 
@@ -98,7 +96,7 @@ while 1:
     if k:
         break
     
-    if tracker.gazeInFixationWindow():
+    if tracker.gazeInFixationWindow(fixationStimuli = fixation_yes):
         fixation = fixation_yes
     else:
         fixation = fixation_no
